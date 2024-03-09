@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request
 from chatterbot import ChatBot
 from chatterbot.trainers import ListTrainer
-import os
+import os 
+import json
 
 app = Flask(__name__)
 
@@ -21,20 +22,23 @@ bot = ChatBot(
 # Create a new trainer
 trainer = ListTrainer(bot)
 
-# Read data from the file and train the bot
-with open('data.txt', 'r') as file:
-    conversations = file.readlines()
+# # Read data from the file and train the bot
+# with open('data.txt', 'r') as file:
+#     conversations = file.readlines()
 
-for conversation in conversations:
-    pair = conversation.strip().split('\t')
-    trainer.train(pair)
+# for conversation in conversations:
+#     pair = conversation.strip().split('\t')
+#     trainer.train(pair)
 
 # Additional training with custom conversations
-# trainer.train([
-#     "Hi",
-#     "Welcome, friend 🤗 my name is shivam I am here to assist you",
-#     "i'm pretty good. thanks for asking"
-# ])
+with open('data.json', 'r') as file:
+    data = json.load(file)
+    
+for intent in data['intents']:
+    patterns = intent['patterns']
+    responses = intent['responses']
+    for pattern in patterns:
+        trainer.train([pattern] + responses)
 
 @app.route("/")
 def home():
