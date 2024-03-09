@@ -40,7 +40,7 @@ jobs:
 
 
       - name: Code Quality(pylint)
-        if: ${{env.Turn_off_gate}} != 'true'
+        if: env.Turn_off_gate != 'true'
         run: |
           pip install pylint
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
