@@ -40,7 +40,7 @@ jobs:
 
 
       - name: Code Quality(pylint)
-        if: ${{env.Turn_off_gate}} == true 
+        if: ${{env.Turn_off_gate}} == flase 
         run: |
           pip install pylint
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -49,7 +49,7 @@ jobs:
           pylint *.py | tail -n 2 >> pylint_results.json
      
       - name: Code Quality Gate Check
-        if: ${{env.Turn_off_gate}} == true 
+        if: ${{env.Turn_off_gate}} == flase
         id: parse_pylint
         run: |
           rating=$(tail -n 2 rating.txt | cut -d ":" -f 2 | cut -d "/" -f1 | cut -d "." -d ":" -f 2 | cut -d "/" -f1 | cut -d "." -f1)
@@ -62,7 +62,7 @@ jobs:
           fi
       - name: Upload Pylint results
         uses: actions/upload-artifact@v2
-        if: always() && ${{env.Turn_off_gate}} == true 
+        if: always() && ${{env.Turn_off_gate}} == flase
         with:
           name: pylint-results
           path: pylint_results.json
