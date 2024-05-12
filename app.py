@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request
 from chatterbot import ChatBot
-from chatterbot.trainers import ListTrainer
+from chatterbot.trainers import ChatterBotCorpusTrainer
+from collections.abc import Hashable
+
 import os 
-import json
 
 app = Flask(__name__)
 
@@ -19,26 +20,14 @@ bot = ChatBot(
     database_uri='sqlite:///database.sqlite3'
 )
 
-# Create a new trainer
-trainer = ListTrainer(bot)
+# Create a new trainer for the chatbot
+trainer = ChatterBotCorpusTrainer(bot)
 
-# # Read data from the file and train the bot
-# with open('data.txt', 'r') as file:
-#     conversations = file.readlines()
+trainer.train("./custom.yaml")
+# Train based on english greetings corpus
+trainer.train("chatterbot.corpus.english.greetings")
 
-# for conversation in conversations:
-#     pair = conversation.strip().split('\t')
-#     trainer.train(pair)
 
-# Additional training with custom conversations
-with open('data.json', 'r') as file:
-    data = json.load(file)
-    
-for intent in data['intents']:
-    patterns = intent['patterns']
-    responses = intent['responses']
-    for pattern in patterns:
-        trainer.train([pattern] + responses)
 
 @app.route("/")
 def home():
@@ -46,6 +35,7 @@ def home():
 
 @app.route("/get_response", methods=["POST"])
 def get_response():
+    default = "Hi How can I  help you Today"
     user_message = request.form.get("message")
     response = bot.get_response(user_message)
     return str(response)
