@@ -1,6 +1,6 @@
 #################################################
 # MAINTAINED BY: SHIVAM
-#################################################
+################################################
 
 name: CI PR
 on:
@@ -69,7 +69,7 @@ jobs:
 
       - name: Upload Pylint results
         uses: actions/upload-artifact@v2
-        if: always() & env.Turn_off_gate != 'true'
+        if: always() && env.Turn_off_gate != 'true'
         with:
           name: pylint-results
           path: pylint_results.json
