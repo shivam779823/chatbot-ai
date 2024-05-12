@@ -77,14 +77,14 @@ jobs:
       #STEP 4 Build and Push
       - name: Image Build
         run: |
-          docker build -t ${{env.DOCKERHUB_USERNAME}}/${{env.IMAGE}}:v1.${{github.run_number}} .
-          echo -e "# Image Build🐋S \n ## Version summary\n Image version : ${{env.IMAGE}}:v1.${{github.run_number}}"  >> $GITHUB_STEP_SUMMARY
+          docker build -t ${{env.DOCKERHUB_USERNAME}}/${{env.IMAGE}}:v1.0${{github.run_number}} .
+          echo -e "# Image Build🐋S \n ## Version summary\n Image version : ${{env.IMAGE}}:v1.0${{github.run_number}}"  >> $GITHUB_STEP_SUMMARY
 
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{env.DOCKERHUB_USERNAME}}/${{env.IMAGE}}:v1.${{github.run_number}}'
+          image-ref: '${{env.DOCKERHUB_USERNAME}}/${{env.IMAGE}}:v1.0${{github.run_number}}'
           format: 'sarif'
           output: 'trivy-results.sarif'
       
@@ -96,6 +96,6 @@ jobs:
       #STEP 6 Push
       - name: Image push
         run: |
-          docker push ${{env.DOCKERHUB_USERNAME}}/${{env.IMAGE}}:v1.${{github.run_number}} 
+          docker push ${{env.DOCKERHUB_USERNAME}}/${{env.IMAGE}}:v1.0${{github.run_number}} 
       
      
