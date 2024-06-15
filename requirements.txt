@@ -3,3 +3,4 @@ pytz
 mysql-connector-python
 flask
 gunicorn
+requests
