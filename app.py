@@ -21,6 +21,8 @@ bot = ChatBot(
 # Train the chatbot with a basic corpus
 trainer = ChatterBotCorpusTrainer(bot)
 trainer.train("chatterbot.corpus.english.greetings")
+trainer.train("./custom.yaml")
+
 
 @app.route("/")
 def home():
