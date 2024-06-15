@@ -15,7 +15,8 @@ MYSQL_DB = os.environ.get("MYSQL_DB", "pharmaco")
 bot = ChatBot(
     'pharmaco',
     storage_adapter='chatterbot.storage.SQLStorageAdapter',
-    database_uri='sqlite:///database.sqlite3'
+    database_uri=f'mysql+mysqlconnector://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}'
+    #database_uri='sqlite:///database.sqlite3'
 )
 
 # Train the chatbot with a basic corpus
