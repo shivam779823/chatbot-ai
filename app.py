@@ -1,29 +1,39 @@
 from flask import Flask, request, jsonify
 from chatterbot import ChatBot
 from chatterbot.trainers import ChatterBotCorpusTrainer
-import requests
-import os 
+import mysql.connector
+import os
 
 app = Flask(__name__)
 
-MYSQL_HOST = os.environ.get("MYSQL_HOST", "ubuntu")
+# MySQL database configuration from environment variables
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
 MYSQL_USER = os.environ.get("MYSQL_USER", "test")
 MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "12345678")
 MYSQL_DB = os.environ.get("MYSQL_DB", "pharmaco")
+
+# Connect to MySQL database
+db_connection = mysql.connector.connect(
+    host=MYSQL_HOST,
+    user=MYSQL_USER,
+    password=MYSQL_PASSWORD,
+    database=MYSQL_DB
+)
+
+# Create a cursor object to interact with the database
+cursor = db_connection.cursor(dictionary=True)
 
 # Create a new ChatBot instance
 bot = ChatBot(
     'pharmaco',
     storage_adapter='chatterbot.storage.SQLStorageAdapter',
     database_uri=f'mysql+mysqlconnector://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}'
-    #database_uri='sqlite:///database.sqlite3'
 )
 
-# Train the chatbot with a basic corpus
+# Train the chatbot with a basic corpus and custom data
 trainer = ChatterBotCorpusTrainer(bot)
 trainer.train("chatterbot.corpus.english.greetings")
 trainer.train("./custom.yaml")
-
 
 @app.route("/")
 def home():
@@ -35,25 +45,83 @@ def get_response():
     user_message = request.json.get("message")
     if not user_message:
         return jsonify(response=default)
-    response = bot.get_response(user_message)
-    return jsonify(response=str(response))
+    
+    # Example of querying data from MySQL database
+    query = "SELECT name, price, mrp, quantity, expiry FROM medicines WHERE name LIKE %s"
+    cursor.execute(query, (f'%{user_message}%',))
+    result = cursor.fetchone()
 
-@app.route("/ask_bot", methods=["POST"])
-def ask_bot():
-    try:
-        user_message = request.form.get("message")
-        if not user_message:
-            return "Error: No message provided", 400
+    if result:
+        response = f"Here are the details for {result['name']}: Price - {result['price']}, MRP - {result['mrp']}, Quantity - {result['quantity']}, Expiry - {result['expiry'].strftime('%Y-%m-%d')}"
+    else:
+        response = str(bot.get_response(user_message))
 
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post("http://pharmaco-chatbot-service:81/api/get_response", json={"message": user_message}, headers=headers, timeout=5)
-        response_json = response.json()
-        return response_json.get("response", "Error: No response from bot")
-    except requests.exceptions.RequestException as e:
-        return f"Error communicating with chatbot: {str(e)}", 500
+    return jsonify(response=response)
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8081)))
+
+
+
+
+
+
+# from flask import Flask, request, jsonify
+# from chatterbot import ChatBot
+# from chatterbot.trainers import ChatterBotCorpusTrainer
+# import requests
+# import os 
+
+# app = Flask(__name__)
+
+# MYSQL_HOST = os.environ.get("MYSQL_HOST", "ubuntu")
+# MYSQL_USER = os.environ.get("MYSQL_USER", "test")
+# MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "12345678")
+# MYSQL_DB = os.environ.get("MYSQL_DB", "pharmaco")
+
+# # Create a new ChatBot instance
+# bot = ChatBot(
+#     'pharmaco',
+#     storage_adapter='chatterbot.storage.SQLStorageAdapter',
+#     database_uri=f'mysql+mysqlconnector://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}'
+#     #database_uri='sqlite:///database.sqlite3'
+# )
+
+# # Train the chatbot with a basic corpus
+# trainer = ChatterBotCorpusTrainer(bot)
+# trainer.train("chatterbot.corpus.english.greetings")
+# trainer.train("./custom.yaml")
+
+
+# @app.route("/")
+# def home():
+#     return "Chatbot API is running."
+
+# @app.route("/api/get_response", methods=["POST"])
+# def get_response():
+#     default = "Hi How can I help you Today"
+#     user_message = request.json.get("message")
+#     if not user_message:
+#         return jsonify(response=default)
+#     response = bot.get_response(user_message)
+#     return jsonify(response=str(response))
+
+# @app.route("/ask_bot", methods=["POST"])
+# def ask_bot():
+#     try:
+#         user_message = request.form.get("message")
+#         if not user_message:
+#             return "Error: No message provided", 400
+
+#         headers = {'Content-Type': 'application/json'}
+#         response = requests.post("http://pharmaco-chatbot-service:81/api/get_response", json={"message": user_message}, headers=headers, timeout=5)
+#         response_json = response.json()
+#         return response_json.get("response", "Error: No response from bot")
+#     except requests.exceptions.RequestException as e:
+#         return f"Error communicating with chatbot: {str(e)}", 500
+
+# if __name__ == "__main__":
+#     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8081)))
 
 
 
