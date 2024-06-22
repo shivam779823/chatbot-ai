@@ -4,6 +4,7 @@ from chatterbot.trainers import ChatterBotCorpusTrainer, ListTrainer
 import mysql.connector
 import yaml
 import os
+import re
 
 app = Flask(__name__)
 
@@ -30,10 +31,6 @@ bot = ChatBot(
 )
 
 # Train the chatbot with a basic corpus and custom data
-#trainer = ChatterBotCorpusTrainer(bot)
-# trainer.train("chatterbot.corpus.english.greetings")
-
-# Function to load and train custom data from a YAML file
 def train_custom_data(file_path):
     with open(file_path, 'r') as stream:
         try:
@@ -52,25 +49,39 @@ train_custom_data("./custom.yaml")
 def home():
     return "Chatbot API is running."
 
+def extract_medicine_name(user_message):
+    # Example regex pattern to extract potential medicine names
+    # This can be adjusted for more complex patterns
+    pattern = r'\b(?:do you have|i need|can i get|is there|have you got)\b\s+(.*)'
+    match = re.search(pattern, user_message, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return user_message.strip()
+
 @app.route("/api/get_response", methods=["POST"])
 def get_response():
     default = "Hi, How can I help you today?"
     user_message = request.json.get("message")
     if not user_message:
         return jsonify(response=default)
+
+    # Extract potential medicine name from user message
+    medicine_name = extract_medicine_name(user_message)
     
     # Establish a new database connection
     db_connection = get_db_connection()
     cursor = db_connection.cursor(dictionary=True)
 
     try:
-        # Example of querying data from MySQL database
+        # Querying data from MySQL database
         query = "SELECT name, price, mrp, quantity, expiry FROM medicines WHERE name LIKE %s"
-        cursor.execute(query, (f'%{user_message}%',))
+        cursor.execute(query, (f'%{medicine_name}%',))
         result = cursor.fetchone()
 
         if result:
-            response = f"Here are the details for {result['name']}: Price - {result['price']}, MRP - {result['mrp']}, Quantity - {result['quantity']}, Expiry - {result['expiry'].strftime('%Y-%m-%d')}"
+            response = (f"Here are the details for {result['name']}: Price - {result['price']}, "
+                        f"MRP - {result['mrp']}, Quantity - {result['quantity']}, "
+                        f"Expiry - {result['expiry'].strftime('%Y-%m-%d')}")
         else:
             response = str(bot.get_response(user_message))
     except Exception as e:
