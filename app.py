@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify
 from chatterbot import ChatBot
-from chatterbot.trainers import ChatterBotCorpusTrainer
+from chatterbot.trainers import ChatterBotCorpusTrainer, ListTrainer
 import mysql.connector
+import yaml
 import os
 
 app = Flask(__name__)
@@ -12,16 +13,14 @@ MYSQL_USER = os.environ.get("MYSQL_USER", "test")
 MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "12345678")
 MYSQL_DB = os.environ.get("MYSQL_DB", "pharmaco")
 
-# Connect to MySQL database
-db_connection = mysql.connector.connect(
-    host=MYSQL_HOST,
-    user=MYSQL_USER,
-    password=MYSQL_PASSWORD,
-    database=MYSQL_DB
-)
-
-# Create a cursor object to interact with the database
-cursor = db_connection.cursor(dictionary=True)
+def get_db_connection():
+    """Create and return a new MySQL database connection."""
+    return mysql.connector.connect(
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
+    )
 
 # Create a new ChatBot instance
 bot = ChatBot(
@@ -33,7 +32,21 @@ bot = ChatBot(
 # Train the chatbot with a basic corpus and custom data
 trainer = ChatterBotCorpusTrainer(bot)
 trainer.train("chatterbot.corpus.english.greetings")
-trainer.train("./custom.yaml")
+
+# Function to load and train custom data from a YAML file
+def train_custom_data(file_path):
+    with open(file_path, 'r') as stream:
+        try:
+            custom_data = yaml.safe_load(stream)
+            conversations = custom_data.get('conversations', [])
+            trainer = ListTrainer(bot)
+            for conversation in conversations:
+                trainer.train(conversation)
+        except yaml.YAMLError as exc:
+            print(f"Error reading YAML file: {exc}")
+
+# Train with custom data
+train_custom_data("./custom.yaml")
 
 @app.route("/")
 def home():
@@ -41,26 +54,36 @@ def home():
 
 @app.route("/api/get_response", methods=["POST"])
 def get_response():
-    default = "Hi How can I help you Today"
+    default = "Hi, How can I help you today?"
     user_message = request.json.get("message")
     if not user_message:
         return jsonify(response=default)
     
-    # Example of querying data from MySQL database
-    query = "SELECT name, price, mrp, quantity, expiry FROM medicines WHERE name LIKE %s"
-    cursor.execute(query, (f'%{user_message}%',))
-    result = cursor.fetchone()
+    # Establish a new database connection
+    db_connection = get_db_connection()
+    cursor = db_connection.cursor(dictionary=True)
 
-    if result:
-        response = f"Here are the details for {result['name']}: Price - {result['price']}, MRP - {result['mrp']}, Quantity - {result['quantity']}, Expiry - {result['expiry'].strftime('%Y-%m-%d')}"
-    else:
-        response = str(bot.get_response(user_message))
+    try:
+        # Example of querying data from MySQL database
+        query = "SELECT name, price, mrp, quantity, expiry FROM medicines WHERE name LIKE %s"
+        cursor.execute(query, (f'%{user_message}%',))
+        result = cursor.fetchone()
+
+        if result:
+            response = f"Here are the details for {result['name']}: Price - {result['price']}, MRP - {result['mrp']}, Quantity - {result['quantity']}, Expiry - {result['expiry'].strftime('%Y-%m-%d')}"
+        else:
+            response = str(bot.get_response(user_message))
+    except Exception as e:
+        response = f"An error occurred: {str(e)}"
+    finally:
+        # Close the cursor and the database connection
+        cursor.close()
+        db_connection.close()
 
     return jsonify(response=response)
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8081)))
-
 
 
 
