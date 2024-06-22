@@ -30,8 +30,8 @@ bot = ChatBot(
 )
 
 # Train the chatbot with a basic corpus and custom data
-trainer = ChatterBotCorpusTrainer(bot)
-trainer.train("chatterbot.corpus.english.greetings")
+#trainer = ChatterBotCorpusTrainer(bot)
+# trainer.train("chatterbot.corpus.english.greetings")
 
 # Function to load and train custom data from a YAML file
 def train_custom_data(file_path):
